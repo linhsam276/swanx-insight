@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Task, Project } from '@/types/lifeos';
+import { Task, Project, AreaType } from '@/types/lifeos';
 import { 
-  Clock, GripVertical, Plus, Calendar, ChevronLeft, ChevronRight,
-  Layers, AlertCircle, Check
+  Clock, GripVertical, Plus, Calendar as CalendarIcon, ChevronLeft, ChevronRight,
+  List, Flag, Check, X
 } from 'lucide-react';
 import { format, addDays, subDays } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -16,8 +16,8 @@ interface PlanTabProps {
 }
 
 // Timeline hours from 04:00 to 24:00
-const TIMELINE_HOURS = Array.from({ length: 21 }, (_, i) => i + 4);
-const HOUR_HEIGHT = 60; // pixels per hour
+const TIMELINE_HOURS = Array.from({ length: 20 }, (_, i) => i + 4);
+const HOUR_HEIGHT = 48; // pixels per hour
 
 export const PlanTab: React.FC<PlanTabProps> = ({
   tasks,
@@ -27,16 +27,27 @@ export const PlanTab: React.FC<PlanTabProps> = ({
   setNewTaskData
 }) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [areaFilter, setAreaFilter] = useState<AreaType>('ALL');
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [dragOverHour, setDragOverHour] = useState<number | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
   
+  // Filter projects by area
+  const filteredProjects = projects.filter(p => {
+    if (areaFilter === 'ALL') return true;
+    return p.area === areaFilter;
+  });
+
   // Get tasks for selected date
   const scheduledTasks = tasks.filter(t => t.date === dateStr && t.startTime);
   const flexibleTasks = tasks.filter(t => t.date === dateStr && !t.startTime);
-  const unscheduledTasks = tasks.filter(t => !t.date || t.date !== dateStr);
+  
+  // Get unscheduled tasks (not for today) grouped by project
+  const unscheduledTasks = tasks.filter(t => 
+    (!t.date || t.date !== dateStr) && t.status !== 'DONE'
+  );
 
   const getProject = (projectId: string) => projects.find(p => p.id === projectId);
 
@@ -109,7 +120,7 @@ export const PlanTab: React.FC<PlanTabProps> = ({
   const handleRemoveFromSchedule = (taskId: string) => {
     setTasks(prev => prev.map(t => 
       t.id === taskId 
-        ? { ...t, startTime: undefined, endTime: undefined, isFixed: false }
+        ? { ...t, date: '', startTime: undefined, endTime: undefined, isFixed: false }
         : t
     ));
   };
@@ -130,109 +141,121 @@ export const PlanTab: React.FC<PlanTabProps> = ({
     const startHour = timeToHour(task.startTime);
     const durationHours = task.estimateMinutes / 60;
     const top = (startHour - 4) * HOUR_HEIGHT;
-    const height = Math.max(40, durationHours * HOUR_HEIGHT - 4);
+    const height = Math.max(36, durationHours * HOUR_HEIGHT - 2);
     const project = getProject(task.projectId);
 
     return (
       <div
         key={task.id}
-        className="absolute left-16 right-2 rounded-lg p-2 cursor-move group transition-all hover:shadow-lg"
+        className="absolute left-12 right-1 rounded-lg p-2 cursor-move group transition-all hover:shadow-lg border"
         style={{
           top: `${top}px`,
           height: `${height}px`,
           backgroundColor: project?.bg || 'hsl(var(--muted))',
-          borderLeft: `3px solid ${project?.color || 'hsl(var(--primary))'}`
+          borderColor: project?.color || 'hsl(var(--border))'
         }}
         draggable
         onDragStart={(e) => handleDragStart(e, task)}
       >
         <div className="flex items-start justify-between h-full">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <GripVertical className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="flex items-center gap-1">
+              <GripVertical className="w-3 h-3 text-muted-foreground flex-shrink-0" />
               <span 
                 className={`text-xs font-semibold truncate ${task.status === 'DONE' ? 'line-through opacity-60' : ''}`}
-                style={{ color: project?.color }}
+                style={{ color: project?.color?.replace('text-', '') }}
               >
                 {task.title}
               </span>
             </div>
-            {height > 50 && (
-              <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
-                <Clock className="w-3 h-3" />
-                <span>{task.startTime} - {task.endTime}</span>
+            {height > 40 && (
+              <div className="flex items-center gap-2 mt-0.5 text-[10px] text-muted-foreground">
+                <span className="flex items-center gap-0.5">
+                  <Clock className="w-2.5 h-2.5" />
+                  {task.startTime}
+                </span>
               </div>
             )}
           </div>
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button 
-              onClick={() => toggleTaskStatus(task.id)}
-              className={`p-1 rounded-full transition-colors ${
-                task.status === 'DONE' 
-                  ? 'bg-green-500 text-white' 
-                  : 'bg-background/80 hover:bg-green-500 hover:text-white'
-              }`}
-            >
-              <Check className="w-3 h-3" />
-            </button>
-            <button 
-              onClick={() => handleRemoveFromSchedule(task.id)}
-              className="p-1 rounded-full bg-background/80 hover:bg-destructive hover:text-destructive-foreground transition-colors"
-            >
-              <AlertCircle className="w-3 h-3" />
-            </button>
+          <button 
+            onClick={(e) => { e.stopPropagation(); handleRemoveFromSchedule(task.id); }}
+            className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-background/50 transition-all"
+          >
+            <X className="w-3 h-3 text-muted-foreground" />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // Task card for left panel (by project)
+  const ProjectTaskCard = ({ task }: { task: Task }) => {
+    const project = getProject(task.projectId);
+    
+    return (
+      <div
+        className="p-2.5 rounded-lg bg-card border border-border group cursor-move hover:shadow-md transition-all"
+        draggable
+        onDragStart={(e) => handleDragStart(e, task)}
+      >
+        <div className="flex items-start gap-2">
+          <GripVertical className="w-3.5 h-3.5 text-muted-foreground mt-0.5 opacity-50 group-hover:opacity-100" />
+          <div className="flex-1 min-w-0">
+            <span className="text-sm font-medium block truncate">{task.title}</span>
+            <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-0.5">
+                <Clock className="w-2.5 h-2.5" />
+                {task.estimateMinutes}m
+              </span>
+              {task.dueTime && (
+                <span className="flex items-center gap-0.5">
+                  <Flag className="w-2.5 h-2.5" />
+                  {task.dueTime}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
     );
   };
 
-  // Task card for unscheduled/flexible tasks
-  const TaskCard = ({ task, isDraggable = true }: { task: Task; isDraggable?: boolean }) => {
+  // Flexible task card
+  const FlexibleTaskCard = ({ task }: { task: Task }) => {
     const project = getProject(task.projectId);
     
     return (
       <div
-        className={`p-3 rounded-xl border border-border bg-card group transition-all hover:shadow-md ${
-          isDraggable ? 'cursor-move' : ''
-        } ${task.status === 'DONE' ? 'opacity-60' : ''}`}
-        draggable={isDraggable}
-        onDragStart={(e) => isDraggable && handleDragStart(e, task)}
+        className="p-2.5 rounded-lg border border-border group cursor-move hover:shadow-md transition-all"
+        style={{ backgroundColor: project?.bg || 'hsl(var(--card))' }}
+        draggable
+        onDragStart={(e) => handleDragStart(e, task)}
       >
         <div className="flex items-start gap-2">
-          {isDraggable && (
-            <GripVertical className="w-4 h-4 text-muted-foreground mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          )}
+          <GripVertical className="w-3.5 h-3.5 text-muted-foreground mt-0.5 opacity-50 group-hover:opacity-100" />
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <div 
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: project?.color || 'hsl(var(--primary))' }}
-              />
-              <span className={`text-sm font-medium truncate ${task.status === 'DONE' ? 'line-through' : ''}`}>
-                {task.title}
+            <span className="text-sm font-medium block truncate">{task.title}</span>
+            {task.description && (
+              <p className="text-[10px] text-muted-foreground mt-0.5 truncate">- {task.description}</p>
+            )}
+            <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-0.5">
+                <Clock className="w-2.5 h-2.5" />
+                {task.estimateMinutes}m
               </span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Clock className="w-3 h-3" />
-              <span>{task.estimateMinutes} phút</span>
-              {project && (
-                <>
-                  <span>•</span>
-                  <span className="truncate">{project.title}</span>
-                </>
+              {task.dueTime && (
+                <span className="flex items-center gap-0.5">
+                  <Flag className="w-2.5 h-2.5" />
+                  {task.dueTime}
+                </span>
               )}
             </div>
           </div>
           <button 
             onClick={() => toggleTaskStatus(task.id)}
-            className={`p-1.5 rounded-lg transition-colors ${
-              task.status === 'DONE' 
-                ? 'bg-green-500 text-white' 
-                : 'bg-muted hover:bg-green-500 hover:text-white'
-            }`}
+            className="p-1 rounded hover:bg-background/50 transition-colors"
           >
-            <Check className="w-3.5 h-3.5" />
+            <Check className="w-3.5 h-3.5 text-muted-foreground hover:text-green-500" />
           </button>
         </div>
       </div>
@@ -241,39 +264,99 @@ export const PlanTab: React.FC<PlanTabProps> = ({
 
   return (
     <div className="h-full flex flex-col lg:flex-row overflow-hidden">
-      {/* Left Panel - Timeline */}
-      <div className="flex-1 flex flex-col overflow-hidden border-r border-border">
+      {/* Left Panel - Tasks by Project */}
+      <div className="w-full lg:w-64 flex flex-col border-r border-border bg-muted/30 overflow-hidden">
+        {/* Area Filter */}
+        <div className="p-3 border-b border-border">
+          <div className="flex flex-wrap gap-1">
+            {(['ALL', 'WORK', 'RELATIONSHIP', 'SELF'] as AreaType[]).map(area => (
+              <button
+                key={area}
+                onClick={() => setAreaFilter(area)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  areaFilter === area 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-card text-muted-foreground hover:text-foreground border border-border'
+                }`}
+              >
+                {area}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Projects with Tasks */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-4">
+          {filteredProjects.map(project => {
+            const projectTasks = unscheduledTasks.filter(t => t.projectId === project.id);
+            if (projectTasks.length === 0) return null;
+            
+            return (
+              <div key={project.id}>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className={`text-sm font-bold ${project.color}`}>{project.title}</h4>
+                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                    {projectTasks.length} tasks
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {projectTasks.map(task => (
+                    <ProjectTaskCard key={task.id} task={task} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          {filteredProjects.every(p => unscheduledTasks.filter(t => t.projectId === p.id).length === 0) && (
+            <div className="text-center py-8 text-muted-foreground text-xs">
+              Không có task chưa lên lịch
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Center Panel - Timeline */}
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Date Navigation */}
-        <div className="flex items-center justify-between p-4 border-b border-border bg-card/50">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card/50">
           <button 
             onClick={() => setSelectedDate(subDays(selectedDate, 1))}
-            className="p-2 rounded-lg hover:bg-muted transition-colors"
+            className="p-1.5 rounded-lg hover:bg-muted transition-colors"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="w-4 h-4" />
           </button>
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-primary" />
-            <span className="font-display font-bold">
+            <CalendarIcon className="w-4 h-4 text-primary" />
+            <span className="font-display font-bold text-sm">
               {format(selectedDate, 'EEEE, dd/MM', { locale: vi })}
             </span>
             {format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') && (
-              <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded-full">
+              <span className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-semibold rounded-full">
                 Hôm nay
               </span>
             )}
           </div>
           <button 
             onClick={() => setSelectedDate(addDays(selectedDate, 1))}
-            className="p-2 rounded-lg hover:bg-muted transition-colors"
+            className="p-1.5 rounded-lg hover:bg-muted transition-colors"
           >
-            <ChevronRight className="w-5 h-5" />
+            <ChevronRight className="w-4 h-4" />
           </button>
+        </div>
+
+        {/* Timeline Header */}
+        <div className="px-4 py-2 border-b border-border bg-muted/50">
+          <h3 className="text-xs font-bold text-primary flex items-center gap-1.5">
+            <CalendarIcon className="w-3.5 h-3.5" />
+            Lịch trình (04:00 - 24:00)
+          </h3>
         </div>
 
         {/* Timeline */}
         <div 
           ref={timelineRef}
-          className="flex-1 overflow-y-auto relative"
+          className="flex-1 overflow-y-auto relative bg-background"
           onDragOver={handleTimelineDragOver}
           onDrop={handleTimelineDrop}
           onDragLeave={() => setDragOverHour(null)}
@@ -283,11 +366,11 @@ export const PlanTab: React.FC<PlanTabProps> = ({
             {TIMELINE_HOURS.map((hour) => (
               <div 
                 key={hour}
-                className="absolute left-0 right-0 border-t border-border/50"
-                style={{ top: `${(hour - 4) * HOUR_HEIGHT}px` }}
+                className="absolute left-0 right-0 border-t border-border/40 hover:bg-muted/30 transition-colors"
+                style={{ top: `${(hour - 4) * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}
               >
-                <span className="absolute left-3 -top-2.5 text-xs text-muted-foreground font-medium bg-background px-1">
-                  {hour.toString().padStart(2, '0')}:00
+                <span className="absolute left-2 top-1 text-[10px] text-muted-foreground font-medium">
+                  {hour}:00
                 </span>
               </div>
             ))}
@@ -295,21 +378,23 @@ export const PlanTab: React.FC<PlanTabProps> = ({
             {/* Current time indicator */}
             {format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') && (
               <div 
-                className="absolute left-12 right-0 h-0.5 bg-destructive z-10"
+                className="absolute left-10 right-0 h-0.5 bg-red-500 z-10"
                 style={{ 
                   top: `${(new Date().getHours() + new Date().getMinutes() / 60 - 4) * HOUR_HEIGHT}px` 
                 }}
               >
-                <div className="absolute -left-1.5 -top-1.5 w-3 h-3 rounded-full bg-destructive" />
+                <div className="absolute -left-1 -top-1 w-2 h-2 rounded-full bg-red-500" />
               </div>
             )}
 
             {/* Drop indicator */}
             {dragOverHour !== null && (
               <div 
-                className="absolute left-14 right-2 h-12 bg-primary/20 border-2 border-dashed border-primary rounded-lg pointer-events-none z-20"
+                className="absolute left-10 right-1 h-10 bg-primary/20 border-2 border-dashed border-primary rounded-lg pointer-events-none z-20 flex items-center justify-center"
                 style={{ top: `${(dragOverHour - 4) * HOUR_HEIGHT}px` }}
-              />
+              >
+                <span className="text-xs font-semibold text-primary">{dragOverHour}:00</span>
+              </div>
             )}
 
             {/* Scheduled tasks */}
@@ -318,66 +403,40 @@ export const PlanTab: React.FC<PlanTabProps> = ({
         </div>
       </div>
 
-      {/* Right Panel - Task Lists */}
-      <div className="w-full lg:w-80 flex flex-col bg-muted/30 overflow-hidden">
-        {/* Flexible Tasks */}
-        <div 
-          className="flex-1 flex flex-col overflow-hidden border-b border-border"
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={handleFlexibleDrop}
-        >
-          <div className="flex items-center justify-between p-3 border-b border-border bg-card/50">
-            <h3 className="font-display font-bold text-sm flex items-center gap-2">
-              <Layers className="w-4 h-4 text-primary" />
-              Việc linh hoạt
-            </h3>
-            <span className="text-xs text-muted-foreground">
-              {flexibleTasks.length} việc
-            </span>
-          </div>
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {flexibleTasks.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground text-sm">
-                Kéo thả task vào đây để thêm việc linh hoạt
-              </div>
-            ) : (
-              flexibleTasks.map(task => (
-                <TaskCard key={task.id} task={task} />
-              ))
-            )}
-          </div>
+      {/* Right Panel - Flexible Tasks */}
+      <div 
+        className="w-full lg:w-72 flex flex-col border-l border-border bg-muted/30 overflow-hidden"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={handleFlexibleDrop}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-3 py-2.5 border-b border-border bg-card/50">
+          <h3 className="text-xs font-bold text-emerald-600 flex items-center gap-1.5">
+            <List className="w-3.5 h-3.5" />
+            Việc linh hoạt (Trong ngày)
+          </h3>
+          <button 
+            onClick={() => {
+              setNewTaskData({ date: dateStr });
+              setIsAddTaskModalOpen(true);
+            }}
+            className="p-1 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
         </div>
 
-        {/* Unscheduled Tasks */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between p-3 border-b border-border bg-card/50">
-            <h3 className="font-display font-bold text-sm flex items-center gap-2">
-              <Clock className="w-4 h-4 text-amber-500" />
-              Chưa lên lịch
-            </h3>
-            <button 
-              onClick={() => {
-                setNewTaskData({ date: dateStr });
-                setIsAddTaskModalOpen(true);
-              }}
-              className="p-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {unscheduledTasks.filter(t => t.status !== 'DONE').length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground text-sm">
-                Tất cả công việc đã được lên lịch
-              </div>
-            ) : (
-              unscheduledTasks
-                .filter(t => t.status !== 'DONE')
-                .map(task => (
-                  <TaskCard key={task.id} task={task} />
-                ))
-            )}
-          </div>
+        {/* Flexible Tasks List */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          {flexibleTasks.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-xs border-2 border-dashed border-border rounded-lg">
+              Kéo thả việc từ danh sách bên trái vào đây
+            </div>
+          ) : (
+            flexibleTasks.map(task => (
+              <FlexibleTaskCard key={task.id} task={task} />
+            ))
+          )}
         </div>
       </div>
     </div>
