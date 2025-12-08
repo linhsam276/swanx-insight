@@ -58,16 +58,20 @@ export const FocusTab: React.FC<FocusTabProps> = ({
   const alarmAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Timer Circle Config - SVG viewBox is 320x320, center at 160,160
+  const MAX_TIMER_MINUTES = 90;
+  const MAX_TIMER_SECONDS = MAX_TIMER_MINUTES * 60;
   const svgSize = 320;
   const center = svgSize / 2; // 160
   const radius = 130;
   const circumference = 2 * Math.PI * radius;
   const progress = timeLeft / initialTime;
-  const strokeDashoffset = circumference * (1 - progress);
-  // Angle starts at top (-90deg = -PI/2), goes clockwise
-  const angle = -Math.PI / 2 + (1 - progress) * 2 * Math.PI;
-  const knobX = center + radius * Math.cos(angle);
-  const knobY = center + radius * Math.sin(angle);
+  // strokeDashoffset: negative value to fill FROM the start (top) going clockwise
+  const strokeDashoffset = circumference * (progress - 1);
+  // Knob angle: starts at top (-PI/2), moves clockwise as time decreases
+  // When progress=1 (full), knob at top; when progress=0, knob completes full circle back to top
+  const knobAngle = -Math.PI / 2 + (1 - progress) * 2 * Math.PI;
+  const knobX = center + radius * Math.cos(knobAngle);
+  const knobY = center + radius * Math.sin(knobAngle);
 
   // Get active task
   const activeTask = tasks.find(t => t.id === activeTaskId);
@@ -162,11 +166,10 @@ export const FocusTab: React.FC<FocusTabProps> = ({
     return () => toggleRainSound(false);
   }, [timerActive, isSoundOn]);
 
-  // Drag Handler - calculate time remaining based on angle from top
+  // Drag Handler - calculate time based on angle from top, max 90 minutes
   const handleCircleDrag = (e: MouseEvent | TouchEvent) => {
     if (!isDragging || !timerRef.current) return;
     
-    // Find the SVG element to get its bounding rect
     const svgElement = timerRef.current.querySelector('svg');
     if (!svgElement) return;
     
@@ -180,16 +183,22 @@ export const FocusTab: React.FC<FocusTabProps> = ({
     const dx = clientX - centerX;
     const dy = clientY - centerY;
     
-    // Calculate angle from top (12 o'clock position)
-    // atan2 gives angle from positive x-axis, we need from negative y-axis
-    let angle = Math.atan2(dx, -dy); // angle from top, clockwise positive
+    // Calculate angle from top (12 o'clock), clockwise positive
+    let angle = Math.atan2(dx, -dy);
     if (angle < 0) angle += 2 * Math.PI;
     
-    // Progress: 0 at top (full time), 1 after full rotation (0 time)
-    // Remaining time = initialTime * (1 - progress from top)
+    // Progress from top: 0 = at top (full time), 1 = full rotation (no time)
     const progressFromTop = angle / (2 * Math.PI);
-    const newTimeLeft = Math.round(initialTime * (1 - progressFromTop));
-    setTimeLeft(Math.max(0, Math.min(initialTime, newTimeLeft)));
+    
+    // Calculate new time: when knob at top = max time, when knob rotates clockwise = less time
+    const newTimeLeft = Math.round(MAX_TIMER_SECONDS * (1 - progressFromTop));
+    const clampedTime = Math.max(60, Math.min(MAX_TIMER_SECONDS, newTimeLeft)); // Min 1 minute
+    
+    setTimeLeft(clampedTime);
+    // Update initialTime if dragged to a higher value
+    if (clampedTime > initialTime) {
+      setInitialTime(clampedTime);
+    }
   };
 
   useEffect(() => {
