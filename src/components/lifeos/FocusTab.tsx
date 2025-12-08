@@ -57,14 +57,17 @@ export const FocusTab: React.FC<FocusTabProps> = ({
   const rainAudioRef = useRef<HTMLAudioElement | null>(null);
   const alarmAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Timer Circle Config
-  const radius = 140;
+  // Timer Circle Config - SVG viewBox is 320x320, center at 160,160
+  const svgSize = 320;
+  const center = svgSize / 2; // 160
+  const radius = 130;
   const circumference = 2 * Math.PI * radius;
   const progress = timeLeft / initialTime;
   const strokeDashoffset = circumference * (1 - progress);
-  const angle = (1 - progress) * 2 * Math.PI - Math.PI / 2;
-  const knobX = 160 + radius * Math.cos(angle);
-  const knobY = 160 + radius * Math.sin(angle);
+  // Angle starts at top (-90deg = -PI/2), goes clockwise
+  const angle = -Math.PI / 2 + (1 - progress) * 2 * Math.PI;
+  const knobX = center + radius * Math.cos(angle);
+  const knobY = center + radius * Math.sin(angle);
 
   // Get active task
   const activeTask = tasks.find(t => t.id === activeTaskId);
@@ -159,11 +162,15 @@ export const FocusTab: React.FC<FocusTabProps> = ({
     return () => toggleRainSound(false);
   }, [timerActive, isSoundOn]);
 
-  // Drag Handler
+  // Drag Handler - calculate time remaining based on angle from top
   const handleCircleDrag = (e: MouseEvent | TouchEvent) => {
     if (!isDragging || !timerRef.current) return;
     
-    const rect = timerRef.current.getBoundingClientRect();
+    // Find the SVG element to get its bounding rect
+    const svgElement = timerRef.current.querySelector('svg');
+    if (!svgElement) return;
+    
+    const rect = svgElement.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
     
@@ -172,12 +179,17 @@ export const FocusTab: React.FC<FocusTabProps> = ({
     
     const dx = clientX - centerX;
     const dy = clientY - centerY;
-    let angle = Math.atan2(dy, dx) + Math.PI / 2;
+    
+    // Calculate angle from top (12 o'clock position)
+    // atan2 gives angle from positive x-axis, we need from negative y-axis
+    let angle = Math.atan2(dx, -dy); // angle from top, clockwise positive
     if (angle < 0) angle += 2 * Math.PI;
     
-    const newProgress = angle / (2 * Math.PI);
-    const newTime = Math.round(newProgress * initialTime);
-    setTimeLeft(Math.max(0, Math.min(initialTime, newTime)));
+    // Progress: 0 at top (full time), 1 after full rotation (0 time)
+    // Remaining time = initialTime * (1 - progress from top)
+    const progressFromTop = angle / (2 * Math.PI);
+    const newTimeLeft = Math.round(initialTime * (1 - progressFromTop));
+    setTimeLeft(Math.max(0, Math.min(initialTime, newTimeLeft)));
   };
 
   useEffect(() => {
@@ -291,32 +303,42 @@ export const FocusTab: React.FC<FocusTabProps> = ({
         onMouseDown={handleMouseDown}
       >
         <div className="relative group cursor-grab active:cursor-grabbing">
-          {/* Timer Circle */}
-          <svg className="w-[280px] h-[280px] md:w-[320px] md:h-[320px] transform pointer-events-none">
+          {/* Timer Circle - using viewBox for consistent coordinates */}
+          <svg 
+            viewBox={`0 0 ${svgSize} ${svgSize}`}
+            className="w-[280px] h-[280px] md:w-[320px] md:h-[320px]"
+          >
             {/* Background Circle */}
             <circle 
-              cx="50%" cy="50%" r={radius} 
-              stroke="rgba(255,255,255,0.1)" 
+              cx={center} 
+              cy={center} 
+              r={radius} 
+              stroke="rgba(255,255,255,0.15)" 
               strokeWidth="8" 
               fill="transparent" 
             />
-            {/* Progress Circle */}
+            {/* Progress Circle - starts from top, goes clockwise */}
             <circle 
-              cx="50%" cy="50%" r={radius}
+              cx={center} 
+              cy={center} 
+              r={radius}
               stroke="white" 
               strokeWidth="8" 
               fill="transparent"
-              transform={`rotate(-90 ${280/2} ${280/2})`}
+              transform={`rotate(-90 ${center} ${center})`}
               strokeDasharray={circumference}
               strokeDashoffset={strokeDashoffset}
               strokeLinecap="round"
-              className="transition-all duration-300"
+              className="transition-all duration-100"
             />
             {/* Knob */}
             <circle 
-              cx={knobX} cy={knobY} r="12" 
+              cx={knobX} 
+              cy={knobY} 
+              r="14" 
               fill="white" 
-              className="shadow-lg cursor-grab active:cursor-grabbing pointer-events-auto drop-shadow-2xl"
+              className="drop-shadow-2xl cursor-grab active:cursor-grabbing"
+              style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))' }}
             />
           </svg>
 
