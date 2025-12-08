@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Task, Project, TaskFilterType, AreaType } from '@/types/lifeos';
 import { 
   Clock, Plus, FolderPlus, Pencil, Check, X, Trash2,
-  Flag, Layers, ChevronDown, ChevronRight
+  Flag, Layers, ChevronDown, ChevronRight, Calendar,
+  Play, Pin, AlertCircle
 } from 'lucide-react';
 import { Modal } from './Modal';
 
@@ -255,22 +256,56 @@ export const TasksTab: React.FC<TasksTabProps> = ({
                       </button>
                       
                       <div className="flex-1 min-w-0">
-                        <h4 className={`font-semibold text-sm ${task.status === 'DONE' ? 'line-through' : ''}`}>
-                          {task.title}
-                        </h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className={`font-semibold text-sm ${task.status === 'DONE' ? 'line-through' : ''}`}>
+                            {task.title}
+                          </h4>
+                          {task.isFixed && (
+                            <Pin className="w-3 h-3 text-primary" />
+                          )}
+                        </div>
                         {task.description && (
                           <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                             {task.description}
                           </p>
                         )}
-                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            Est: {task.estimateMinutes}m / Act: {task.actualMinutes}m
+                        
+                        {/* Time Info Row */}
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                          {/* Schedule Time */}
+                          {(task.startTime || task.endTime) && (
+                            <span className="flex items-center gap-1 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">
+                              <Play className="w-2.5 h-2.5" />
+                              {task.startTime || '--:--'} - {task.endTime || '--:--'}
+                            </span>
+                          )}
+                          
+                          {/* Due Time */}
+                          {task.dueTime && (
+                            <span className="flex items-center gap-1 text-[10px] bg-warning/10 text-warning px-1.5 py-0.5 rounded font-medium">
+                              <AlertCircle className="w-2.5 h-2.5" />
+                              Due: {task.dueTime}
+                            </span>
+                          )}
+                          
+                          {/* Date */}
+                          {task.date && (
+                            <span className="flex items-center gap-1 text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
+                              <Calendar className="w-2.5 h-2.5" />
+                              {task.date}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Estimate & Priority Row */}
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                            <Clock className="w-2.5 h-2.5" />
+                            {task.estimateMinutes}m est / {task.actualMinutes}m act
                           </span>
                           {task.priority && (
                             <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${PRIORITY_STYLES[task.priority]}`}>
-                              {task.priority.toUpperCase()}
+                              {task.priority === 'high' ? 'Cao' : task.priority === 'medium' ? 'TB' : 'Thấp'}
                             </span>
                           )}
                         </div>
@@ -453,13 +488,13 @@ export const TasksTab: React.FC<TasksTabProps> = ({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
-                  Dự kiến (phút)
+                  Ngày
                 </label>
                 <input
-                  type="number"
+                  type="date"
                   className="w-full p-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-card"
-                  value={selectedTaskForEdit.estimateMinutes}
-                  onChange={e => setSelectedTaskForEdit({ ...selectedTaskForEdit, estimateMinutes: parseInt(e.target.value) || 0 })}
+                  value={selectedTaskForEdit.date || ''}
+                  onChange={e => setSelectedTaskForEdit({ ...selectedTaskForEdit, date: e.target.value })}
                 />
               </div>
               <div>
@@ -475,6 +510,73 @@ export const TasksTab: React.FC<TasksTabProps> = ({
                   <option value="medium">Trung bình</option>
                   <option value="high">Cao</option>
                 </select>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
+                  Bắt đầu
+                </label>
+                <input
+                  type="time"
+                  className="w-full p-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-card"
+                  value={selectedTaskForEdit.startTime || ''}
+                  onChange={e => setSelectedTaskForEdit({ ...selectedTaskForEdit, startTime: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
+                  Kết thúc
+                </label>
+                <input
+                  type="time"
+                  className="w-full p-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-card"
+                  value={selectedTaskForEdit.endTime || ''}
+                  onChange={e => setSelectedTaskForEdit({ ...selectedTaskForEdit, endTime: e.target.value })}
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
+                  Due time
+                </label>
+                <input
+                  type="time"
+                  className="w-full p-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-card"
+                  value={selectedTaskForEdit.dueTime || ''}
+                  onChange={e => setSelectedTaskForEdit({ ...selectedTaskForEdit, dueTime: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
+                  Dự kiến (phút)
+                </label>
+                <input
+                  type="number"
+                  className="w-full p-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-card"
+                  value={selectedTaskForEdit.estimateMinutes}
+                  onChange={e => setSelectedTaskForEdit({ ...selectedTaskForEdit, estimateMinutes: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3 p-3 bg-muted rounded-xl">
+              <button
+                onClick={() => setSelectedTaskForEdit({ ...selectedTaskForEdit, isFixed: !selectedTaskForEdit.isFixed })}
+                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                  selectedTaskForEdit.isFixed
+                    ? 'bg-primary border-primary text-primary-foreground'
+                    : 'border-border hover:border-primary'
+                }`}
+              >
+                {selectedTaskForEdit.isFixed && <Check className="w-3 h-3" />}
+              </button>
+              <div>
+                <span className="text-sm font-medium">Cố định thời gian</span>
+                <p className="text-xs text-muted-foreground">Task sẽ được ghim vào lịch theo giờ đã đặt</p>
               </div>
             </div>
             <div className="flex gap-2">
