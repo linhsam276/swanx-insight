@@ -5,6 +5,7 @@ import { ReflectTab } from '@/components/lifeos/ReflectTab';
 import { FocusTab } from '@/components/lifeos/FocusTab';
 import { PlanTab } from '@/components/lifeos/PlanTab';
 import { TasksTab } from '@/components/lifeos/TasksTab';
+import { CalendarTab } from '@/components/lifeos/CalendarTab';
 import { Modal } from '@/components/lifeos/Modal';
 import { 
   TabType, Task, Project, Habit, ReflectionLog 
@@ -210,7 +211,15 @@ const LifeOS: React.FC = () => {
               setNewTaskData={setNewTaskData}
             />
           )}
-          {activeTab === 'CALENDAR' && <PlaceholderTab name="Calendar" />}
+          {activeTab === 'CALENDAR' && (
+            <CalendarTab
+              tasks={tasks}
+              projects={projects}
+              setTasks={setTasks}
+              setIsAddTaskModalOpen={setIsAddTaskModalOpen}
+              setNewTaskData={setNewTaskData}
+            />
+          )}
         </div>
       </main>
 
