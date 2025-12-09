@@ -7,6 +7,7 @@ import { Task, Project, CalendarViewMode, AreaType } from '@/types/lifeos';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, 
   isSameMonth, isSameDay, isToday, startOfWeek, endOfWeek, addWeeks, subWeeks } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { TaskDetailModal } from './TaskDetailModal';
 
 interface CalendarTabProps {
   tasks: Task[];
@@ -36,6 +37,7 @@ export const CalendarTab: React.FC<CalendarTabProps> = ({
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<CalendarViewMode>('MONTH');
   const [areaFilter, setAreaFilter] = useState<AreaType>('ALL');
+  const [selectedTaskForDetail, setSelectedTaskForDetail] = useState<Task | null>(null);
 
   // Get project by ID
   const getProject = (projectId: string) => projects.find(p => p.id === projectId);
@@ -98,6 +100,28 @@ export const CalendarTab: React.FC<CalendarTabProps> = ({
   const handleAddTask = (date: Date) => {
     setNewTaskData({ date: format(date, 'yyyy-MM-dd') });
     setIsAddTaskModalOpen(true);
+  };
+
+  // Update task
+  const updateTask = (taskId: string, updates: Partial<Task>) => {
+    setTasks(prev => prev.map(t => 
+      t.id === taskId ? { ...t, ...updates } : t
+    ));
+  };
+
+  // Delete task
+  const deleteTask = (taskId: string) => {
+    setTasks(prev => prev.filter(t => t.id !== taskId));
+    setSelectedTaskForDetail(null);
+  };
+
+  // Toggle task status
+  const toggleTaskStatus = (taskId: string) => {
+    setTasks(prev => prev.map(t => 
+      t.id === taskId 
+        ? { ...t, status: t.status === 'DONE' ? 'TODO' : 'DONE' }
+        : t
+    ));
   };
 
   // Render calendar day cell
@@ -270,7 +294,8 @@ export const CalendarTab: React.FC<CalendarTabProps> = ({
                 return (
                   <div
                     key={task.id}
-                    className="p-3 rounded-xl bg-card border border-border/50 hover:shadow-md transition-all duration-200"
+                    className="p-3 rounded-xl bg-card border border-border/50 hover:shadow-md transition-all duration-200 cursor-pointer"
+                    onClick={() => setSelectedTaskForDetail(task)}
                   >
                     <div className="flex items-start gap-2">
                       <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${project?.color?.replace('text-', 'bg-') || 'bg-muted'}`} />
@@ -384,6 +409,16 @@ export const CalendarTab: React.FC<CalendarTabProps> = ({
           )}
         </div>
       </div>
+
+      {/* Task Detail Modal */}
+      <TaskDetailModal
+        task={selectedTaskForDetail}
+        projects={projects}
+        onClose={() => setSelectedTaskForDetail(null)}
+        onUpdate={updateTask}
+        onDelete={deleteTask}
+        onToggleStatus={toggleTaskStatus}
+      />
     </div>
   );
 };

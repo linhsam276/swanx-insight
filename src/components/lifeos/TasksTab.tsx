@@ -6,6 +6,7 @@ import {
   Play, Pin, AlertCircle
 } from 'lucide-react';
 import { Modal } from './Modal';
+import { TaskDetailModal } from './TaskDetailModal';
 
 interface TasksTabProps {
   tasks: Task[];
@@ -455,151 +456,15 @@ export const TasksTab: React.FC<TasksTabProps> = ({
         )}
       </Modal>
 
-      {/* Edit Task Modal */}
-      <Modal
-        isOpen={!!selectedTaskForEdit}
+      {/* Task Detail Modal */}
+      <TaskDetailModal
+        task={selectedTaskForEdit}
+        projects={projects}
         onClose={() => setSelectedTaskForEdit(null)}
-        title="Chi tiết công việc"
-      >
-        {selectedTaskForEdit && (
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
-                Tên công việc
-              </label>
-              <input
-                type="text"
-                className="w-full p-3 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-card"
-                value={selectedTaskForEdit.title}
-                onChange={e => setSelectedTaskForEdit({ ...selectedTaskForEdit, title: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
-                Mô tả
-              </label>
-              <textarea
-                className="w-full p-3 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none bg-card"
-                rows={3}
-                value={selectedTaskForEdit.description || ''}
-                onChange={e => setSelectedTaskForEdit({ ...selectedTaskForEdit, description: e.target.value })}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
-                  Ngày
-                </label>
-                <input
-                  type="date"
-                  className="w-full p-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-card"
-                  value={selectedTaskForEdit.date || ''}
-                  onChange={e => setSelectedTaskForEdit({ ...selectedTaskForEdit, date: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
-                  Ưu tiên
-                </label>
-                <select
-                  className="w-full p-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary appearance-none bg-card"
-                  value={selectedTaskForEdit.priority || 'medium'}
-                  onChange={e => setSelectedTaskForEdit({ ...selectedTaskForEdit, priority: e.target.value as any })}
-                >
-                  <option value="low">Thấp</option>
-                  <option value="medium">Trung bình</option>
-                  <option value="high">Cao</option>
-                </select>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
-                  Bắt đầu
-                </label>
-                <input
-                  type="time"
-                  className="w-full p-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-card"
-                  value={selectedTaskForEdit.startTime || ''}
-                  onChange={e => setSelectedTaskForEdit({ ...selectedTaskForEdit, startTime: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
-                  Kết thúc
-                </label>
-                <input
-                  type="time"
-                  className="w-full p-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-card"
-                  value={selectedTaskForEdit.endTime || ''}
-                  onChange={e => setSelectedTaskForEdit({ ...selectedTaskForEdit, endTime: e.target.value })}
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
-                  Due time
-                </label>
-                <input
-                  type="time"
-                  className="w-full p-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-card"
-                  value={selectedTaskForEdit.dueTime || ''}
-                  onChange={e => setSelectedTaskForEdit({ ...selectedTaskForEdit, dueTime: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
-                  Dự kiến (phút)
-                </label>
-                <input
-                  type="number"
-                  className="w-full p-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-card"
-                  value={selectedTaskForEdit.estimateMinutes}
-                  onChange={e => setSelectedTaskForEdit({ ...selectedTaskForEdit, estimateMinutes: parseInt(e.target.value) || 0 })}
-                />
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3 p-3 bg-muted rounded-xl">
-              <button
-                onClick={() => setSelectedTaskForEdit({ ...selectedTaskForEdit, isFixed: !selectedTaskForEdit.isFixed })}
-                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                  selectedTaskForEdit.isFixed
-                    ? 'bg-primary border-primary text-primary-foreground'
-                    : 'border-border hover:border-primary'
-                }`}
-              >
-                {selectedTaskForEdit.isFixed && <Check className="w-3 h-3" />}
-              </button>
-              <div>
-                <span className="text-sm font-medium">Cố định thời gian</span>
-                <p className="text-xs text-muted-foreground">Task sẽ được ghim vào lịch theo giờ đã đặt</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => deleteTask(selectedTaskForEdit.id)}
-                className="flex-1 py-3 bg-destructive text-destructive-foreground font-bold rounded-xl hover:bg-destructive/90 transition-colors flex items-center justify-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Xóa
-              </button>
-              <button
-                onClick={() => {
-                  updateTask(selectedTaskForEdit.id, selectedTaskForEdit);
-                  setSelectedTaskForEdit(null);
-                }}
-                className="flex-1 py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition-colors"
-              >
-                Lưu thay đổi
-              </button>
-            </div>
-          </div>
-        )}
-      </Modal>
+        onUpdate={updateTask}
+        onDelete={deleteTask}
+        onToggleStatus={toggleTaskStatus}
+      />
     </div>
   );
 };

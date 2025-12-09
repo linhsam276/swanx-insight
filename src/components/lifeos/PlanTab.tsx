@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { format, addDays, subDays } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { TaskDetailModal } from './TaskDetailModal';
 
 interface PlanTabProps {
   tasks: Task[];
@@ -30,6 +31,7 @@ export const PlanTab: React.FC<PlanTabProps> = ({
   const [areaFilter, setAreaFilter] = useState<AreaType>('ALL');
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [dragOverHour, setDragOverHour] = useState<number | null>(null);
+  const [selectedTaskForDetail, setSelectedTaskForDetail] = useState<Task | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -134,6 +136,19 @@ export const PlanTab: React.FC<PlanTabProps> = ({
     ));
   };
 
+  // Update task
+  const updateTask = (taskId: string, updates: Partial<Task>) => {
+    setTasks(prev => prev.map(t => 
+      t.id === taskId ? { ...t, ...updates } : t
+    ));
+  };
+
+  // Delete task
+  const deleteTask = (taskId: string) => {
+    setTasks(prev => prev.filter(t => t.id !== taskId));
+    setSelectedTaskForDetail(null);
+  };
+
   // Render scheduled task on timeline
   const renderScheduledTask = (task: Task) => {
     if (!task.startTime) return null;
@@ -147,7 +162,7 @@ export const PlanTab: React.FC<PlanTabProps> = ({
     return (
       <div
         key={task.id}
-        className="absolute left-12 right-1 rounded-lg p-2 cursor-move group transition-all hover:shadow-lg border"
+        className="absolute left-12 right-1 rounded-lg p-2 cursor-pointer group transition-all hover:shadow-lg border"
         style={{
           top: `${top}px`,
           height: `${height}px`,
@@ -156,6 +171,7 @@ export const PlanTab: React.FC<PlanTabProps> = ({
         }}
         draggable
         onDragStart={(e) => handleDragStart(e, task)}
+        onClick={() => setSelectedTaskForDetail(task)}
       >
         <div className="flex items-start justify-between h-full">
           <div className="flex-1 min-w-0">
@@ -194,9 +210,10 @@ export const PlanTab: React.FC<PlanTabProps> = ({
     
     return (
       <div
-        className="p-2.5 rounded-lg bg-card border border-border group cursor-move hover:shadow-md transition-all"
+        className="p-2.5 rounded-lg bg-card border border-border group cursor-pointer hover:shadow-md transition-all"
         draggable
         onDragStart={(e) => handleDragStart(e, task)}
+        onClick={() => setSelectedTaskForDetail(task)}
       >
         <div className="flex items-start gap-2">
           <GripVertical className="w-3.5 h-3.5 text-muted-foreground mt-0.5 opacity-50 group-hover:opacity-100" />
@@ -226,10 +243,11 @@ export const PlanTab: React.FC<PlanTabProps> = ({
     
     return (
       <div
-        className="p-2.5 rounded-lg border border-border group cursor-move hover:shadow-md transition-all"
+        className="p-2.5 rounded-lg border border-border group cursor-pointer hover:shadow-md transition-all"
         style={{ backgroundColor: project?.bg || 'hsl(var(--card))' }}
         draggable
         onDragStart={(e) => handleDragStart(e, task)}
+        onClick={() => setSelectedTaskForDetail(task)}
       >
         <div className="flex items-start gap-2">
           <GripVertical className="w-3.5 h-3.5 text-muted-foreground mt-0.5 opacity-50 group-hover:opacity-100" />
@@ -252,7 +270,7 @@ export const PlanTab: React.FC<PlanTabProps> = ({
             </div>
           </div>
           <button 
-            onClick={() => toggleTaskStatus(task.id)}
+            onClick={(e) => { e.stopPropagation(); toggleTaskStatus(task.id); }}
             className="p-1 rounded hover:bg-background/50 transition-colors"
           >
             <Check className="w-3.5 h-3.5 text-muted-foreground hover:text-green-500" />
@@ -439,6 +457,16 @@ export const PlanTab: React.FC<PlanTabProps> = ({
           )}
         </div>
       </div>
+
+      {/* Task Detail Modal */}
+      <TaskDetailModal
+        task={selectedTaskForDetail}
+        projects={projects}
+        onClose={() => setSelectedTaskForDetail(null)}
+        onUpdate={updateTask}
+        onDelete={deleteTask}
+        onToggleStatus={toggleTaskStatus}
+      />
     </div>
   );
 };
