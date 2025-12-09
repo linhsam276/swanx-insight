@@ -210,15 +210,32 @@ export const PlanTab: React.FC<PlanTabProps> = ({
     
     return (
       <div
-        className="p-2.5 rounded-lg bg-card border border-border group cursor-pointer hover:shadow-md transition-all"
+        className={`p-2.5 rounded-lg bg-card border border-border group cursor-pointer hover:shadow-md transition-all ${
+          task.status === 'DONE' ? 'opacity-60' : ''
+        }`}
         draggable
         onDragStart={(e) => handleDragStart(e, task)}
         onClick={() => setSelectedTaskForDetail(task)}
       >
         <div className="flex items-start gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleTaskStatus(task.id);
+            }}
+            className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors flex-shrink-0 ${
+              task.status === 'DONE'
+                ? 'bg-green-500 border-green-500 text-white'
+                : 'border-border hover:border-primary'
+            }`}
+          >
+            {task.status === 'DONE' && <Check className="w-3 h-3" />}
+          </button>
           <GripVertical className="w-3.5 h-3.5 text-muted-foreground mt-0.5 opacity-50 group-hover:opacity-100" />
           <div className="flex-1 min-w-0">
-            <span className="text-sm font-medium block truncate">{task.title}</span>
+            <span className={`text-sm font-medium block truncate ${task.status === 'DONE' ? 'line-through' : ''}`}>
+              {task.title}
+            </span>
             <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
               <span className="flex items-center gap-0.5">
                 <Clock className="w-2.5 h-2.5" />
@@ -243,16 +260,33 @@ export const PlanTab: React.FC<PlanTabProps> = ({
     
     return (
       <div
-        className="p-2.5 rounded-lg border border-border group cursor-pointer hover:shadow-md transition-all"
+        className={`p-2.5 rounded-lg border border-border group cursor-pointer hover:shadow-md transition-all ${
+          task.status === 'DONE' ? 'opacity-60' : ''
+        }`}
         style={{ backgroundColor: project?.bg || 'hsl(var(--card))' }}
         draggable
         onDragStart={(e) => handleDragStart(e, task)}
         onClick={() => setSelectedTaskForDetail(task)}
       >
         <div className="flex items-start gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleTaskStatus(task.id);
+            }}
+            className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors flex-shrink-0 ${
+              task.status === 'DONE'
+                ? 'bg-green-500 border-green-500 text-white'
+                : 'border-border hover:border-primary'
+            }`}
+          >
+            {task.status === 'DONE' && <Check className="w-3 h-3" />}
+          </button>
           <GripVertical className="w-3.5 h-3.5 text-muted-foreground mt-0.5 opacity-50 group-hover:opacity-100" />
           <div className="flex-1 min-w-0">
-            <span className="text-sm font-medium block truncate">{task.title}</span>
+            <span className={`text-sm font-medium block truncate ${task.status === 'DONE' ? 'line-through' : ''}`}>
+              {task.title}
+            </span>
             {task.description && (
               <p className="text-[10px] text-muted-foreground mt-0.5 truncate">- {task.description}</p>
             )}
@@ -269,12 +303,6 @@ export const PlanTab: React.FC<PlanTabProps> = ({
               )}
             </div>
           </div>
-          <button 
-            onClick={(e) => { e.stopPropagation(); toggleTaskStatus(task.id); }}
-            className="p-1 rounded hover:bg-background/50 transition-colors"
-          >
-            <Check className="w-3.5 h-3.5 text-muted-foreground hover:text-green-500" />
-          </button>
         </div>
       </div>
     );

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { 
   ChevronLeft, ChevronRight, Plus, Clock, 
-  Calendar as CalendarIcon, LayoutGrid, Rows3 
+  Calendar as CalendarIcon, LayoutGrid, Rows3, Check
 } from 'lucide-react';
 import { Task, Project, CalendarViewMode, AreaType } from '@/types/lifeos';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, 
@@ -294,11 +294,25 @@ export const CalendarTab: React.FC<CalendarTabProps> = ({
                 return (
                   <div
                     key={task.id}
-                    className="p-3 rounded-xl bg-card border border-border/50 hover:shadow-md transition-all duration-200 cursor-pointer"
+                    className={`p-3 rounded-xl bg-card border border-border/50 hover:shadow-md transition-all duration-200 cursor-pointer ${
+                      task.status === 'DONE' ? 'opacity-60' : ''
+                    }`}
                     onClick={() => setSelectedTaskForDetail(task)}
                   >
                     <div className="flex items-start gap-2">
-                      <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${project?.color?.replace('text-', 'bg-') || 'bg-muted'}`} />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleTaskStatus(task.id);
+                        }}
+                        className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors flex-shrink-0 ${
+                          task.status === 'DONE'
+                            ? 'bg-green-500 border-green-500 text-white'
+                            : 'border-border hover:border-primary'
+                        }`}
+                      >
+                        {task.status === 'DONE' && <Check className="w-3 h-3" />}
+                      </button>
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm font-medium ${task.status === 'DONE' ? 'line-through text-muted-foreground' : ''}`}>
                           {task.title}
